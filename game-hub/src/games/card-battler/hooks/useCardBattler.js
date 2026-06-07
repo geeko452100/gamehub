@@ -45,15 +45,21 @@ export function useCardBattler() {
     const timers = [];
     let offset = 600;
 
-    timers.push(setTimeout(() => dispatch({ type: 'ENEMY_EXECUTE_ATTACK' }), offset));
-    offset += 1000;
-    timers.push(setTimeout(() => dispatch({ type: 'SET_PHASE', payload: { phase: 'defend-phase' } }), offset));
-    offset += 300;
-    timers.push(setTimeout(() => dispatch({ type: 'ENEMY_EXECUTE_DEFENSE' }), offset));
-    offset += 1000;
-    timers.push(setTimeout(() => dispatch({ type: 'SET_PHASE', payload: { phase: 'attack-phase' } }), offset));
-    offset += 300;
-    timers.push(setTimeout(() => dispatch({ type: 'START_PLAYER_TURN' }), offset));
+    if (gameState.combatPhase === 'defense-phase') {
+      timers.push(setTimeout(() => dispatch({ type: 'ENEMY_EXECUTE_DEFENSE' }), offset));
+      offset += 1000;
+      timers.push(setTimeout(() => dispatch({ type: 'START_PLAYER_TURN' }), offset));
+    } else {
+      timers.push(setTimeout(() => dispatch({ type: 'ENEMY_EXECUTE_ATTACK' }), offset));
+      offset += 1000;
+      timers.push(setTimeout(() => dispatch({ type: 'SET_PHASE', payload: { phase: 'defend-phase' } }), offset));
+      offset += 300;
+      timers.push(setTimeout(() => dispatch({ type: 'ENEMY_EXECUTE_DEFENSE' }), offset));
+      offset += 1000;
+      timers.push(setTimeout(() => dispatch({ type: 'SET_PHASE', payload: { phase: 'attack-phase' } }), offset));
+      offset += 300;
+      timers.push(setTimeout(() => dispatch({ type: 'START_PLAYER_TURN' }), offset));
+    }
 
     return () => timers.forEach(clearTimeout);
   }, [gameState.turnOwner, gameState.gameOver, dispatch]);
@@ -73,6 +79,7 @@ export function useCardBattler() {
     executeAttack,
     executeDefense,
     startPlayerTurn,
-    resetGame
+    resetGame,
+    dispatch
   };
 }

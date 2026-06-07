@@ -42,18 +42,20 @@ export function useBattleActions({
   }, [executeAttack, executeDefense, gameState.combatPhase, gameState.player.staged, gameState.turnOwner, showAttackBanner, showDefenseBanner]);
 
   const handleDragStart = useCallback((cardId, source) => (e) => {
-    e.dataTransfer.setData('cardId', cardId);
-    e.dataTransfer.setData('source', source);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(cardId));
+    e.dataTransfer.setData('cardSource', source);
   }, []);
 
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
   }, []);
 
   const handleSlotDrop = useCallback((e) => {
     e.preventDefault();
-    const cardId = e.dataTransfer.getData('cardId');
-    const source = e.dataTransfer.getData('source');
+    const cardId = e.dataTransfer.getData('text/plain');
+    const source = e.dataTransfer.getData('cardSource');
     if (!cardId) return;
     if (source === 'hand') stageCard(cardId);
     if (source === 'stage') unstageCard(cardId);
@@ -61,8 +63,8 @@ export function useBattleActions({
 
   const handleHandDrop = useCallback((e) => {
     e.preventDefault();
-    const cardId = e.dataTransfer.getData('cardId');
-    const source = e.dataTransfer.getData('source');
+    const cardId = e.dataTransfer.getData('text/plain');
+    const source = e.dataTransfer.getData('cardSource');
     if (source === 'stage' && cardId) unstageCard(cardId);
   }, [unstageCard]);
 
@@ -71,7 +73,7 @@ export function useBattleActions({
     ? 'Are you sure you want to switch to the defense phase?'
     : 'Are you sure you want to end your turn?';
 
-  const actionReady = gameState.turnOwner === 'player-turn' && ((gameState.combatPhase === 'attack-phase' && gameState.player.staged.some((card) => card.type === 'attack')) || (gameState.combatPhase === 'defend-phase' && gameState.player.staged.some((card) => card.type === 'defend')));
+  const actionReady = gameState.turnOwner === 'player-turn' && ((gameState.combatPhase === 'attack-phase' && gameState.player.staged.some((card) => card.type === 'attack')) || (gameState.combatPhase === 'defense-phase' && gameState.player.staged.some((card) => card.type === 'defend')));
   const actionLabel = gameState.turnOwner !== 'player-turn'
     ? gameState.combatPhase === 'attack-phase'
       ? 'Attack (Not Your Turn)'

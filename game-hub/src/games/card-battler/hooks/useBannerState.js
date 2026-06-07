@@ -21,6 +21,8 @@ function useTimeoutBanner() {
     return () => {
       clearTimeout(timers.current.slide);
       clearTimeout(timers.current.hide);
+      setBanner(defaultBanner); // Fix: Reset visibility state on Strict Mode unmount
+      setSlidingOut(false);     // Fix: Reset transition state on Strict Mode unmount
     };
   }, []);
 
@@ -37,27 +39,66 @@ export function useBannerState(gameState) {
   const defenseBanner = useTimeoutBanner();
   const enemyAttackBanner = useTimeoutBanner();
   const enemyDefenseBanner = useTimeoutBanner();
+  const startingBanner = useTimeoutBanner();
 
   const previousPlayerHp = useRef(gameState.player.hp);
   const previousEnemyBlock = useRef(gameState.enemy.block);
   const previousTurnOwner = useRef(gameState.turnOwner);
-  const hasMountedRef = useRef(false);
+  
+  // Fix: Initialize to null so it forces a match check on fresh mount survives double-mounts
+  const previousStartId = useRef(null); 
+  const startBannerActive = useRef(false);
+  const phaseBannerTimer = useRef(null);
+  const startBannerTimer = useRef(null);
 
   useEffect(() => {
-    if (!hasMountedRef.current) {
-      hasMountedRef.current = true;
-      return;
-    }
-
     const ownerLabel = gameState.turnOwner === 'player-turn' ? 'Player' : 'Enemy';
+    const flipMessage = gameState.startFlip ? `${ownerLabel} won the coin toss.` : 'Winning coin toss.';
     const phaseLabel = gameState.combatPhase === 'attack-phase' ? 'Attack Phase' : 'Defense Phase';
-    const title = `${ownerLabel} ${phaseLabel}`;
-    const subtitle = gameState.turnOwner === 'player-turn'
+    const phaseTitle = `${ownerLabel} ${phaseLabel}`;
+    
+    let phaseSubtitle = gameState.turnOwner === 'player-turn'
       ? `Your ${phaseLabel} is now active.`
       : `Enemy ${phaseLabel} is now active.`;
 
-    phaseBanner.show(title, subtitle, 1000, 2000);
-  }, [gameState.combatPhase, gameState.turnOwner]);
+    // Fix: Provide context if it is the restrictive opening round
+    if (gameState.isFirstTurnOfGame) {
+      phaseSubtitle = gameState.turnOwner === 'player-turn'
+        ? "First turn rule: You must defend or setup first!"
+        : "First turn rule: Enemy must defend or setup first!";
+    }
+
+    const showStartingBanner = () => {
+      clearTimeout(startBannerTimer.current);
+      startingBanner.show(`${ownerLabel} goes first!`, flipMessage, 1000, 2000);
+      startBannerActive.current = true;
+      startBannerTimer.current = setTimeout(() => {
+        startBannerActive.current = false;
+        startBannerTimer.current = null;
+      }, 2000);
+    };
+
+    const showPhaseBanner = () => {
+      clearTimeout(phaseBannerTimer.current);
+      if (startBannerActive.current) {
+        phaseBannerTimer.current = setTimeout(() => {
+          phaseBanner.show(phaseTitle, phaseSubtitle, 1000, 2000);
+        }, 2000);
+      } else {
+        phaseBanner.show(phaseTitle, phaseSubtitle, 1000, 2000);
+      }
+    };
+
+    // Fix: Cleaned condition checks (dropped hasMountedRef check completely)
+    if (previousStartId.current !== gameState.startId) {
+      previousStartId.current = gameState.startId;
+      showStartingBanner();
+      showPhaseBanner();
+      return;
+    }
+
+    showPhaseBanner();
+  }, [gameState.combatPhase, gameState.startId, gameState.turnOwner, gameState.isFirstTurnOfGame]);
 
   useEffect(() => {
     if (previousTurnOwner.current !== gameState.turnOwner) {
@@ -83,6 +124,15 @@ export function useBannerState(gameState) {
     previousEnemyBlock.current = gameState.enemy.block;
   }, [gameState.enemy.block, gameState.player.hp, gameState.turnOwner]);
 
+  useEffect(() => {
+    return () => {
+      clearTimeout(phaseBannerTimer.current);
+      clearTimeout(startBannerTimer.current);
+      previousStartId.current = null; // Fix: Reset tracking variables across cleanup loops
+      startBannerActive.current = false;
+    };
+  }, []);
+
   return {
     playerShake,
     setPlayerShake,
@@ -100,6 +150,8 @@ export function useBannerState(gameState) {
     enemyAttackBannerSlidingOut: enemyAttackBanner.slidingOut,
     enemyDefenseBanner: enemyDefenseBanner.banner,
     enemyDefenseBannerSlidingOut: enemyDefenseBanner.slidingOut,
+    startingBanner: startingBanner.banner,
+    startingBannerSlidingOut: startingBanner.slidingOut,
     showAttackBanner: attackBanner.show,
     showDefenseBanner: defenseBanner.show,
     showEnemyAttackBanner: enemyAttackBanner.show,
