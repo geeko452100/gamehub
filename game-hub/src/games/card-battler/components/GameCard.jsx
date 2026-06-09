@@ -1,5 +1,3 @@
-// src/components/GameCard.jsx
-import React from 'react';
 import { Shield, ShieldAlert, Swords } from 'lucide-react';
 
 export default function GameCard({ 
@@ -17,19 +15,13 @@ export default function GameCard({
   // 1. A card is clickable if it is playable OR explicitly marked clickable
   const isClickable = Boolean(onClick && (isPlayable || clickable));
 
-  // 2. Compute the dynamic frame styling based on the active phase match rules
-  let interactiveStyles = '';
-  let cursorStyles = '';
+  const interactiveStyles = isPlayable
+    ? 'border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)] animate-pulse-outline hover:-translate-y-4 hover:shadow-[0_0_20px_rgba(52,211,153,0.6)]'
+    : 'border-slate-800 opacity-40 grayscale pointer-events-none select-none';
 
-  if (isPlayable) {
-    // Green pulsating outline glow for affordable phase-matching options
-    interactiveStyles = 'border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)] animate-pulse-outline hover:-translate-y-4 hover:shadow-[0_0_20px_rgba(52,211,153,0.6)]';
-    cursorStyles = draggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer';
-  } else {
-    // Grayed-out, faded, and unclickable if wrong phase or completely unaffordable
-    interactiveStyles = 'border-slate-800 opacity-40 grayscale pointer-events-none select-none';
-    cursorStyles = 'cursor-not-allowed';
-  }
+  const cursorStyles = isPlayable
+    ? (draggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer')
+    : 'cursor-not-allowed';
 
   return (
     <div 
@@ -37,7 +29,7 @@ export default function GameCard({
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDrop={onDrop}
-      onClick={() => isClickable && onClick(card.id)}
+      onClick={() => isClickable && onClick(card.instanceId)}
       className={`${className ?? 'w-40 h-56'} bg-slate-950 border rounded-xl p-3 flex flex-col justify-between shadow-2xl transition-all duration-200 select-none ${interactiveStyles} ${cursorStyles}`}
     >
       {/* Header Layout */}

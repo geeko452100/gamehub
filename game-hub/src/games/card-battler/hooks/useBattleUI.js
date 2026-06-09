@@ -1,27 +1,52 @@
 import { useBattleActions } from './useBattleActions';
 import { useBannerState } from './useBannerState';
 
+/**
+ * Composes useBannerState + useBattleActions into a single hook for the battle screen.
+ * The gameState passed in must already be normalised with `.player` and `.enemy` keys.
+ *
+ * @param {{
+ *   gameState: object|null,
+ *   myUserId: string|number,
+ *   stageCard: Function,
+ *   unstageCard: Function,
+ *   handlePhaseTransition: Function,
+ *   executeAttack: Function,
+ *   executeDefense: Function,
+ *   resetGame: Function,
+ * }} args
+ */
 export function useBattleUI(args) {
-  const cancelPhaseTransition = () => {
-    setConfirmPhaseOpen(false);
+  const {
+    gameState,
+    myUserId,
+    stageCard,
+    unstageCard,
+    handlePhaseTransition,
+    executeAttack,
+    executeDefense,
+    resetGame,
+  } = args;
 
-    if (document.body.style.cursor === 'not-allowed') {
-      document.body.style.cursor = 'default';
-    }
-  };
+  const bannerState = useBannerState(gameState, myUserId);
 
-  const bannerState = useBannerState(args.gameState);
   const actions = useBattleActions({
-    ...args,
+    gameState,
+    currentUserId:     myUserId,
+    stageCard,
+    unstageCard,
+    handlePhaseTransition,
+    executeAttack,
+    executeDefense,
     setConfirmPhaseOpen: bannerState.setConfirmPhaseOpen,
-    setEnemyShake: bannerState.setEnemyShake,
-    showAttackBanner: bannerState.showAttackBanner,
-    showDefenseBanner: bannerState.showDefenseBanner
+    setEnemyShake:       bannerState.setEnemyShake,
+    showAttackBanner:    bannerState.showAttackBanner,
+    showDefenseBanner:   bannerState.showDefenseBanner,
   });
 
   return {
     ...bannerState,
     ...actions,
-    resetGame: args.resetGame
+    resetGame,
   };
 }

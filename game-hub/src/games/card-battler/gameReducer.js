@@ -1,74 +1,49 @@
-import { handlePlayerReducer } from './playerLogic';
-import { handleEnemyReducer } from './enemyLogic';
-import { INITIAL_ENERGY, shuffleDeck, drawZone } from './gameLogic';
-import { ATTACK_DECK, DEFENSE_DECK } from './cards';
+import { initialGameState, createNewGameState } from './initialState';
+import { handlePvPReducer } from './pvpLogic';
 
-const createInitialGameState = () => {
-  // 1. Initialize separated structural layout decks
-  let attackDeck = shuffleDeck(ATTACK_DECK);
-  let defenseDeck = shuffleDeck(DEFENSE_DECK);
-  
-  let attackDiscard = [];
-  let defenseDiscard = [];
+/**
+ * Root reducer for the card battler game.
+ * Delegates all PvP mutations to handlePvPReducer; owns only meta-level actions here.
+ *
+ * @param {typeof initialGameState} state
+ * @param {{ type: string, payload?: any }} action
+ */
+export function gameReducer(state = initialGameState, action) {
+  switch (action.type) {
 
-  // 2. Exact initial hand breakdown: 3 Attack cards, 4 Defense cards
-  const initialAttackDraw = drawZone(3, attackDeck, attackDiscard, []);
-  attackDeck = initialAttackDraw.deck;
-  attackDiscard = initialAttackDraw.discard;
-  const attackHandPart = initialAttackDraw.hand;
+    case 'INITIALIZE_GAME': {
+      const { player1Id, player2Id } = action.payload ?? {};
 
-  const initialDefenseDraw = drawZone(4, defenseDeck, defenseDiscard, []);
-  defenseDeck = initialDefenseDraw.deck;
-  defenseDiscard = initialDefenseDraw.discard;
-  const defenseHandPart = initialDefenseDraw.hand;
+      if (!player1Id) {
+        console.warn('gameReducer: INITIALIZE_GAME called without a valid player1Id.');
+        return state;
+      }
 
-  // Combine arrays to construct the 7-card starting pool
-  const startingHand = [...attackHandPart, ...defenseHandPart];
+      return createNewGameState(player1Id, player2Id);
+    }
 
-  const heads = Math.random() < 0.5;
-  const initialTurnOwner = heads ? 'player-turn' : 'enemy-turn';
-  const goesFirst = initialTurnOwner === 'player-turn';
+    // Blind-replace local state with the authoritative server snapshot.
+    case 'SYNC_FROM_SERVER':
+      return action.payload ?? state;
 
-  return {
-    player: {
-      hp: 50,
-      block: 0,
-      energy: INITIAL_ENERGY,
-      attackDeck,
-      defenseDeck,
-      attackDiscard,
-      defenseDiscard,
-      hand: startingHand,
-      staged: []
-    },
-    enemy: { hp: 50, block: 0 },
-    turnOwner: initialTurnOwner,
-    combatPhase: goesFirst ? 'defense-phase' : 'attack-phase',
-    startFlip: heads ? 'Heads' : 'Tails',
-    startId: Date.now(),
-    gameOver: null,
-    isFirstTurnOfGame: true 
-  };
-};
+    case 'STAGE_CARD':
+    case 'UNSTAGE_CARD':
+    case 'EXECUTE_ATTACK':
+    case 'EXECUTE_DEFENSE':
+    case 'NEXT_PHASE':
+    case 'DISCARD_CARD':
+      return handlePvPReducer(state, action);
 
-export const initialGameState = createInitialGameState();
+    case 'RESET_GAME':
+      return {
+        ...initialGameState,
+        player_1_id: state.player_1_id,
+        player_2_id: state.player_2_id,
+        turnOwner:   state.player_1_id,
+        stateVersion: (state.stateVersion ?? 0) + 1,
+      };
 
-export function gameReducer(state, action) {
-  if (state.gameOver && action.type !== 'RESET_GAME') return state;
-  if (action.type === 'RESET_GAME') return createInitialGameState();
-
-  if ([
-    'STAGE_CARD', 'UNSTAGE_CARD', 'DISCARD_CARD', 
-    'EXECUTE_ATTACK', 'EXECUTE_DEFENSE', 'PLAYER_NEXT_PHASE'
-  ].includes(action.type)) {
-    return handlePlayerReducer(state, action);
+    default:
+      return state;
   }
-
-  if ([
-    'ENEMY_EXECUTE_ATTACK', 'ENEMY_EXECUTE_DEFENSE', 'ENEMY_NEXT_PHASE'
-  ].includes(action.type)) {
-    return handleEnemyReducer(state, action);
-  }
-
-  return state;
 }

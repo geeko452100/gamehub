@@ -1,135 +1,144 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-const defaultBanner = { visible: false, title: '', subtitle: '' };
+const DEFAULT_BANNER = { visible: false, title: '', subtitle: '' };
 
+/**
+ * Manages a single auto-dismissing banner with a slide-out animation.
+ * Timers are stored in a ref so they survive re-renders without going stale.
+ */
 function useTimeoutBanner() {
-  const [banner, setBanner] = useState(defaultBanner);
+  const [banner, setBanner]       = useState(DEFAULT_BANNER);
   const [slidingOut, setSlidingOut] = useState(false);
   const timers = useRef({ hide: null, slide: null });
 
   const show = useCallback((title, subtitle, slideDelay = 1400, hideDelay = 1800) => {
     clearTimeout(timers.current.slide);
     clearTimeout(timers.current.hide);
+
     setBanner({ visible: true, title, subtitle });
     setSlidingOut(false);
 
     timers.current.slide = setTimeout(() => setSlidingOut(true), slideDelay);
-    timers.current.hide = setTimeout(() => setBanner((prev) => ({ ...prev, visible: false })), hideDelay);
+    timers.current.hide  = setTimeout(
+      () => setBanner((prev) => ({ ...prev, visible: false })),
+      hideDelay
+    );
   }, []);
 
+  // Cleanup on unmount only — do not set state after unmount.
   useEffect(() => {
     return () => {
       clearTimeout(timers.current.slide);
       clearTimeout(timers.current.hide);
-      setBanner(defaultBanner); // Fix: Reset visibility state on Strict Mode unmount
-      setSlidingOut(false);     // Fix: Reset transition state on Strict Mode unmount
     };
   }, []);
 
   return { banner, slidingOut, show };
 }
 
-export function useBannerState(gameState) {
-  const [playerShake, setPlayerShake] = useState(false);
-  const [enemyShake, setEnemyShake] = useState(false);
+/**
+ * Centralises all battle-banner and shake state for the UI layer.
+ *
+ * @param {object|null} gameState  Normalised game state (with .player / .enemy keys)
+ * @param {string|number} currentUserId
+ */
+export function useBannerState(gameState, currentUserId) {
+  const [playerShake, setPlayerShake]       = useState(false);
+  const [enemyShake, setEnemyShake]         = useState(false);
   const [confirmPhaseOpen, setConfirmPhaseOpen] = useState(false);
 
-  const phaseBanner = useTimeoutBanner();
-  const attackBanner = useTimeoutBanner();
-  const defenseBanner = useTimeoutBanner();
-  const enemyAttackBanner = useTimeoutBanner();
+  const phaseBanner       = useTimeoutBanner();
+  const attackBanner      = useTimeoutBanner();
+  const defenseBanner     = useTimeoutBanner();
+  const enemyAttackBanner  = useTimeoutBanner();
   const enemyDefenseBanner = useTimeoutBanner();
-  const startingBanner = useTimeoutBanner();
+  const startingBanner    = useTimeoutBanner();
 
-  const previousPlayerHp = useRef(gameState.player.hp);
-  const previousEnemyBlock = useRef(gameState.enemy.block);
-  const previousTurnOwner = useRef(gameState.turnOwner);
-  
-  // Fix: Initialize to null so it forces a match check on fresh mount survives double-mounts
-  const previousStartId = useRef(null); 
-  const startBannerActive = useRef(false);
-  const phaseBannerTimer = useRef(null);
-  const startBannerTimer = useRef(null);
+  // Use refs to track previous values without triggering re-renders.
+  const prevPlayerHp    = useRef(gameState?.player?.hp   ?? 50);
+  const prevEnemyBlock  = useRef(gameState?.enemy?.block ?? 0);
+  const prevGameId      = useRef(null);
+  const startShown      = useRef(false);
 
+  const isPlayerTurn = String(gameState?.turnOwner) === String(currentUserId);
+
+  // ── Match-start banner (fires once per unique game ID) ────────────────────
   useEffect(() => {
-    const ownerLabel = gameState.turnOwner === 'player-turn' ? 'Player' : 'Enemy';
-    const flipMessage = gameState.startFlip ? `${ownerLabel} won the coin toss.` : 'Winning coin toss.';
+    if (!gameState?.id) return;
+    if (startShown.current || prevGameId.current === gameState.id) return;
+
+    prevGameId.current = gameState.id;
+    startShown.current = true;
+    startingBanner.show('Match Initialized', 'Prepare your battle deck strategies.', 2000, 2600);
+  }, [gameState?.id, startingBanner.show]);
+
+  // ── Phase / turn banner ───────────────────────────────────────────────────
+  // BUG FIX: Track the previous phase+owner pair so the banner only fires when
+  // something actually changes — not on every re-render that touches gameState.
+  const prevPhaseKey = useRef(null);
+  useEffect(() => {
+    if (!gameState) return;
+
+    const phaseKey = `${gameState.combatPhase}-${gameState.turnOwner}`;
+    if (phaseKey === prevPhaseKey.current) return;
+    prevPhaseKey.current = phaseKey;
+
     const phaseLabel = gameState.combatPhase === 'attack-phase' ? 'Attack Phase' : 'Defense Phase';
-    const phaseTitle = `${ownerLabel} ${phaseLabel}`;
-    
-    let phaseSubtitle = gameState.turnOwner === 'player-turn'
-      ? `Your ${phaseLabel} is now active.`
-      : `Enemy ${phaseLabel} is now active.`;
 
-    // Fix: Provide context if it is the restrictive opening round
-    if (gameState.isFirstTurnOfGame) {
-      phaseSubtitle = gameState.turnOwner === 'player-turn'
-        ? "First turn rule: You must defend or setup first!"
-        : "First turn rule: Enemy must defend or setup first!";
+    if (isPlayerTurn) {
+      phaseBanner.show('Your Turn', `Systems active for ${phaseLabel}.`, 1500, 2100);
+    } else {
+      phaseBanner.show('Opponent Turn', `Awaiting execution for ${phaseLabel}.`, 1500, 2100);
     }
+  }, [gameState?.combatPhase, gameState?.turnOwner, isPlayerTurn, phaseBanner.show]);
 
-    const showStartingBanner = () => {
-      clearTimeout(startBannerTimer.current);
-      startingBanner.show(`${ownerLabel} goes first!`, flipMessage, 1000, 2000);
-      startBannerActive.current = true;
-      startBannerTimer.current = setTimeout(() => {
-        startBannerActive.current = false;
-        startBannerTimer.current = null;
-      }, 2000);
-    };
-
-    const showPhaseBanner = () => {
-      clearTimeout(phaseBannerTimer.current);
-      if (startBannerActive.current) {
-        phaseBannerTimer.current = setTimeout(() => {
-          phaseBanner.show(phaseTitle, phaseSubtitle, 1000, 2000);
-        }, 2000);
-      } else {
-        phaseBanner.show(phaseTitle, phaseSubtitle, 1000, 2000);
-      }
-    };
-
-    // Fix: Cleaned condition checks (dropped hasMountedRef check completely)
-    if (previousStartId.current !== gameState.startId) {
-      previousStartId.current = gameState.startId;
-      showStartingBanner();
-      showPhaseBanner();
-      return;
-    }
-
-    showPhaseBanner();
-  }, [gameState.combatPhase, gameState.startId, gameState.turnOwner, gameState.isFirstTurnOfGame]);
-
+  // ── HP damage and block-gain banners ─────────────────────────────────────
   useEffect(() => {
-    if (previousTurnOwner.current !== gameState.turnOwner) {
-      previousTurnOwner.current = gameState.turnOwner;
-      previousPlayerHp.current = gameState.player.hp;
-      previousEnemyBlock.current = gameState.enemy.block;
-      return;
-    }
+    if (!gameState) return;
 
-    if (gameState.turnOwner === 'enemy-turn') {
-      if (gameState.player.hp < previousPlayerHp.current) {
-        const damage = previousPlayerHp.current - gameState.player.hp;
-        enemyAttackBanner.show('Enemy Strike!', `${damage} damage hit your core.`);
+    const currentHp    = gameState.player.hp;
+    const currentBlock = gameState.enemy.block;
+
+    if (currentHp < prevPlayerHp.current) {
+      const damage = prevPlayerHp.current - currentHp;
+
+      // BUG FIX: Use functional setState updater to avoid stale closure on the
+      // shake timeout — the old code captured `setPlayerShake` inside a plain
+      // setTimeout without clearing it on unmount, risking a no-op state update.
+      setPlayerShake(true);
+      const shakeTimer = setTimeout(() => setPlayerShake(false), 500);
+
+      if (isPlayerTurn) {
+        defenseBanner.show('Defense Resolution', `Shield compromised! Lost ${damage} HP.`, 1800, 2600);
+      } else {
+        enemyAttackBanner.show('Opponent Strike!', `Enemy hit for ${damage} damage.`, 1800, 2600);
       }
 
-      if (gameState.enemy.block > previousEnemyBlock.current) {
-        const blockGain = gameState.enemy.block - previousEnemyBlock.current;
-        enemyDefenseBanner.show('Enemy Shields Up!', `${blockGain} block gained.`, 1800, 2600);
-      }
+      // Return cleanup so the timeout doesn't fire after unmount.
+      return () => clearTimeout(shakeTimer);
     }
 
-    previousPlayerHp.current = gameState.player.hp;
-    previousEnemyBlock.current = gameState.enemy.block;
-  }, [gameState.enemy.block, gameState.player.hp, gameState.turnOwner]);
+    if (currentBlock > prevEnemyBlock.current && !isPlayerTurn) {
+      const gain = currentBlock - prevEnemyBlock.current;
+      enemyDefenseBanner.show('Opponent Shields Up!', `${gain} block gained.`, 1800, 2600);
+    }
 
+    prevPlayerHp.current   = currentHp;
+    prevEnemyBlock.current = currentBlock;
+  }, [
+    gameState?.player?.hp,
+    gameState?.enemy?.block,
+    isPlayerTurn,
+    defenseBanner.show,
+    enemyAttackBanner.show,
+    enemyDefenseBanner.show,
+  ]);
+
+  // Reset game-scoped refs when the component unmounts.
   useEffect(() => {
     return () => {
-      clearTimeout(phaseBannerTimer.current);
-      clearTimeout(startBannerTimer.current);
-      previousStartId.current = null; // Fix: Reset tracking variables across cleanup loops
-      startBannerActive.current = false;
+      prevGameId.current = null;
+      startShown.current = false;
     };
   }, []);
 
@@ -140,21 +149,19 @@ export function useBannerState(gameState) {
     setEnemyShake,
     confirmPhaseOpen,
     setConfirmPhaseOpen,
-    phaseBanner: phaseBanner.banner,
-    phaseSlidingOut: phaseBanner.slidingOut,
-    attackBanner: attackBanner.banner,
-    attackBannerSlidingOut: attackBanner.slidingOut,
-    defenseBanner: defenseBanner.banner,
-    defenseBannerSlidingOut: defenseBanner.slidingOut,
-    enemyAttackBanner: enemyAttackBanner.banner,
+    phaseBanner:              phaseBanner.banner,
+    phaseSlidingOut:          phaseBanner.slidingOut,
+    attackBanner:             attackBanner.banner,
+    attackBannerSlidingOut:   attackBanner.slidingOut,
+    defenseBanner:            defenseBanner.banner,
+    defenseBannerSlidingOut:  defenseBanner.slidingOut,
+    enemyAttackBanner:        enemyAttackBanner.banner,
     enemyAttackBannerSlidingOut: enemyAttackBanner.slidingOut,
-    enemyDefenseBanner: enemyDefenseBanner.banner,
+    enemyDefenseBanner:       enemyDefenseBanner.banner,
     enemyDefenseBannerSlidingOut: enemyDefenseBanner.slidingOut,
-    startingBanner: startingBanner.banner,
+    startingBanner:           startingBanner.banner,
     startingBannerSlidingOut: startingBanner.slidingOut,
-    showAttackBanner: attackBanner.show,
-    showDefenseBanner: defenseBanner.show,
-    showEnemyAttackBanner: enemyAttackBanner.show,
-    showEnemyDefenseBanner: enemyDefenseBanner.show
+    showAttackBanner:         attackBanner.show,
+    showDefenseBanner:        defenseBanner.show,
   };
 }

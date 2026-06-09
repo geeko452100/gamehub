@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Gamepad2, Home, Cpu, Swords, Puzzle } from 'lucide-react';
 

@@ -30,13 +30,13 @@ export default function BattleHandZone({
 
             return (
               <GameCard
-                key={card.id}
+                key={card.instanceId}
                 card={card}
                 onClick={handlePlayCard}
                 canAfford={canAfford}
-                isPlayable={isPlayable} // Direct boolean to toggle card styles
+                isPlayable={isPlayable}
                 draggable={isPlayable}
-                onDragStart={handleDragStart(card.id, 'hand')}
+                onDragStart={handleDragStart(card.instanceId, 'hand')}
               />
             );
           })

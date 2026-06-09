@@ -1,7 +1,12 @@
 import { useCallback } from 'react';
 
+/**
+ * Provides all player interaction handlers for the battle screen.
+ * Stateless — derives everything from gameState on every render.
+ */
 export function useBattleActions({
   gameState,
+  currentUserId,
   stageCard,
   unstageCard,
   handlePhaseTransition,
@@ -10,10 +15,19 @@ export function useBattleActions({
   setConfirmPhaseOpen,
   setEnemyShake,
   showAttackBanner,
-  showDefenseBanner
+  showDefenseBanner,
 }) {
-  const handlePlayCard = useCallback((cardId) => {
-    const card = gameState.player.hand.find((item) => item.id === cardId);
+  const isPlayerTurn = String(gameState?.turnOwner) === String(currentUserId);
+
+  // ── Card play ─────────────────────────────────────────────────────────────
+  const handlePlayCard = useCallback((instanceId) => {
+    if (!gameState) return;
+
+    // BUG FIX: Search by instanceId, not id. Multiple cards of the same type
+    // share the same `id`; instanceId is the unique per-instance key used
+    // throughout pvpLogic. Using `id` here caused wrong-card staging when
+    // the hand contained duplicate card types.
+    const card = gameState.player.hand.find((c) => c.instanceId === instanceId);
     if (!card) return;
 
     if (card.attack > 0) {
@@ -21,75 +35,67 @@ export function useBattleActions({
       setTimeout(() => setEnemyShake(false), 500);
     }
 
-    stageCard(cardId);
-  }, [gameState.player.hand, stageCard, setEnemyShake]);
+    stageCard(instanceId);
+  }, [gameState, stageCard, setEnemyShake]);
 
+  // ── Execute attack or defense ─────────────────────────────────────────────
   const handleExecuteAction = useCallback(() => {
-    const activePhase = gameState.combatPhase;
-    const staged = gameState.player.staged;
-    const isPlayerTurn = gameState.turnOwner === 'player-turn';
-    if (!isPlayerTurn) return;
+    if (!gameState || !isPlayerTurn) return;
 
-    if (activePhase === 'attack-phase') {
-      const totalAttack = staged.filter((card) => card.type === 'attack').reduce((sum, card) => sum + card.attack, 0);
+    const { combatPhase, player } = gameState;
+    const staged = player.staged ?? [];
+
+    if (combatPhase === 'attack-phase') {
+      const totalAttack = staged
+        .filter((c) => c.type === 'attack')
+        .reduce((sum, c) => sum + c.attack, 0);
       showAttackBanner('Attack Launched!', `${totalAttack} damage unleashed.`);
       executeAttack();
     } else {
-      const totalDefense = staged.filter((card) => card.type === 'defend').reduce((sum, card) => sum + card.defense, 0);
-      showDefenseBanner('Shield Up!', `${totalDefense} block gained.`);
+      const totalDefense = staged
+        .filter((c) => c.type === 'defend')
+        .reduce((sum, c) => sum + c.defense, 0);
+      showDefenseBanner('Defense Matrix Raised!', `${totalDefense} block generated.`);
       executeDefense();
     }
-  }, [executeAttack, executeDefense, gameState.combatPhase, gameState.player.staged, gameState.turnOwner, showAttackBanner, showDefenseBanner]);
+  }, [gameState, isPlayerTurn, executeAttack, executeDefense, showAttackBanner, showDefenseBanner]);
 
-  const handleDragStart = useCallback((cardId, source) => (e) => {
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', String(cardId));
-    e.dataTransfer.setData('cardSource', source);
+  // ── Drag-and-drop ─────────────────────────────────────────────────────────
+  const handleDragStart = useCallback((instanceId, location) => (e) => {
+    e.dataTransfer.setData('text/plain', JSON.stringify({ cardId: instanceId, from: location }));
   }, []);
 
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
   }, []);
 
   const handleSlotDrop = useCallback((e) => {
     e.preventDefault();
-    const cardId = e.dataTransfer.getData('text/plain');
-    const source = e.dataTransfer.getData('cardSource');
-    if (!cardId) return;
-    if (source === 'hand') stageCard(cardId);
-    if (source === 'stage') unstageCard(cardId);
-  }, [stageCard, unstageCard]);
+    if (!isPlayerTurn) return;
+    try {
+      const { cardId, from } = JSON.parse(e.dataTransfer.getData('text/plain'));
+      if (from === 'hand') handlePlayCard(cardId);
+    } catch (err) {
+      console.error('handleSlotDrop: malformed drag payload', err);
+    }
+  }, [isPlayerTurn, handlePlayCard]);
 
   const handleHandDrop = useCallback((e) => {
     e.preventDefault();
-    const cardId = e.dataTransfer.getData('text/plain');
-    const source = e.dataTransfer.getData('cardSource');
-    if (source === 'stage' && cardId) unstageCard(cardId);
-  }, [unstageCard]);
+    if (!isPlayerTurn) return;
+    try {
+      const { cardId, from } = JSON.parse(e.dataTransfer.getData('text/plain'));
+      if (from === 'stage') unstageCard(cardId);
+    } catch (err) {
+      console.error('handleHandDrop: malformed drag payload', err);
+    }
+  }, [isPlayerTurn, unstageCard]);
 
-  const phaseButtonLabel = gameState.combatPhase === 'attack-phase' ? 'Switch to Defense Phase' : 'End Player Turn';
-  const phasePromptMessage = gameState.combatPhase === 'attack-phase'
-    ? 'Are you sure you want to switch to the defense phase?'
-    : 'Are you sure you want to end your turn?';
-
-  const actionReady = gameState.turnOwner === 'player-turn' && ((gameState.combatPhase === 'attack-phase' && gameState.player.staged.some((card) => card.type === 'attack')) || (gameState.combatPhase === 'defense-phase' && gameState.player.staged.some((card) => card.type === 'defend')));
-  const actionLabel = gameState.turnOwner !== 'player-turn'
-    ? gameState.combatPhase === 'attack-phase'
-      ? 'Attack (Not Your Turn)'
-      : 'Defend (Not Your Turn)'
-    : gameState.combatPhase === 'attack-phase'
-      ? actionReady
-        ? 'Attack'
-        : 'No Attack Cards'
-      : actionReady
-        ? 'Defend'
-        : 'No Defense Cards';
-
+  // ── Phase transition with confirmation gate ───────────────────────────────
   const handlePhaseTransitionWithPrompt = useCallback(() => {
-    if (gameState.gameOver) return;
+    if (gameState?.gameOver) return;
     setConfirmPhaseOpen(true);
-  }, [gameState.gameOver, setConfirmPhaseOpen]);
+  }, [gameState?.gameOver, setConfirmPhaseOpen]);
 
   const confirmPhaseTransition = useCallback(() => {
     setConfirmPhaseOpen(false);
@@ -99,6 +105,31 @@ export function useBattleActions({
   const cancelPhaseTransition = useCallback(() => {
     setConfirmPhaseOpen(false);
   }, [setConfirmPhaseOpen]);
+
+  // ── Derived display values ────────────────────────────────────────────────
+  const gameFinished = gameState?.gameOver ?? null;
+
+  const phaseButtonLabel = gameState?.combatPhase === 'attack-phase'
+    ? 'To Defend Phase'
+    : 'End Turn';
+
+  const phasePromptMessage = gameState?.combatPhase === 'attack-phase'
+    ? 'Are you ready to transition to the Defense Phase?'
+    : 'Are you sure you want to end your turn?';
+
+  const staged = gameState?.player?.staged ?? [];
+  const actionReady = isPlayerTurn && (
+    (gameState?.combatPhase === 'attack-phase'  && staged.some((c) => c.type === 'attack'))  ||
+    (gameState?.combatPhase === 'defense-phase' && staged.some((c) => c.type === 'defend'))
+  );
+
+  const actionLabel = !isPlayerTurn
+    ? gameState?.combatPhase === 'attack-phase'
+      ? 'Attack (Not Your Turn)'
+      : 'Defend (Not Your Turn)'
+    : gameState?.combatPhase === 'attack-phase'
+      ? actionReady ? 'Attack'  : 'No Attack Cards'
+      : actionReady ? 'Defend'  : 'No Defense Cards';
 
   return {
     actionReady,
@@ -113,6 +144,7 @@ export function useBattleActions({
     handleHandDrop,
     handlePhaseTransitionWithPrompt,
     confirmPhaseTransition,
-    cancelPhaseTransition
+    cancelPhaseTransition,
+    gameFinished,
   };
 }

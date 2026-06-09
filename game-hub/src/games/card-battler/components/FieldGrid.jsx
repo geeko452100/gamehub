@@ -20,7 +20,7 @@ export default function FieldGrid({ stagedCards, isPlayerTurn, handleDragStart, 
             onDragLeave={() => setActiveSlotIndex((current) => (current === i ? null : current))}
             onDragOver={handleDragOver}
             onDrop={(e) => {
-              handleSlotDrop(e);
+              handleSlotDrop(e, i); // Pass index so handler knows which slot received the drop
               setActiveSlotIndex(null);
             }}
           >
@@ -31,13 +31,13 @@ export default function FieldGrid({ stagedCards, isPlayerTurn, handleDragStart, 
                 canAfford={false}
                 clickable
                 draggable={isPlayerTurn}
-                onDragStart={handleDragStart(stagedCards[i].id, 'stage')}
+                onDragStart={handleDragStart(stagedCards[i].instanceId, 'stage')}
                 onDragOver={handleDragOver}
                 onDrop={(e) => {
-                  handleSlotDrop(e);
+                  handleSlotDrop(e, i);
                   setActiveSlotIndex(null);
                 }}
-                onClick={() => onUnstage(stagedCards[i].id)}
+                onClick={() => onUnstage(stagedCards[i].instanceId)}
               />
             ) : (
               <span className="text-slate-700 text-xs font-mono">FIELD SLOT {i + 1}</span>
