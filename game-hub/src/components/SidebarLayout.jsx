@@ -7,7 +7,7 @@ export default function SidebarLayout({ children }) {
   const menuItems = [
     { path: '/', name: 'Dashboard', icon: Home },
     { path: '/game/cards', name: 'Card Battler', icon: Swords },
-    { path: '/game/idle', name: 'Incremental Engine', icon: Cpu },
+    { path: '/game/idle', name: 'Tycoon Terminal', icon: Cpu },
     { path: '/game/puzzle', name: 'Daily Puzzle', icon: Puzzle },
   ];
 

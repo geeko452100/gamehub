@@ -8,15 +8,17 @@ const GAMES = [
     desc: 'Distributed real-time state synchronization via WebSocket infrastructure.', 
     path: '/game/cards',
     icon: Swords,
-    color: 'text-emerald-400 border-emerald-500/20 hover:border-emerald-500/50'
+    color: 'text-emerald-400 border-emerald-500/20 hover:border-emerald-500/50',
+    status: 'live',
   },
   { 
     id: 'idle', 
-    title: 'Incremental Engine', 
-    desc: 'Asynchronous automation loops, geometric scaling algorithms, and offline progress validation.', 
+    title: 'Tycoon Terminal', 
+    desc: 'Build businesses, hire managers, and stack upgrades in an Adventure Capitalist-style idle economy.', 
     path: '/game/idle',
     icon: Cpu,
-    color: 'text-amber-400 border-amber-500/20 hover:border-amber-500/50'
+    color: 'text-amber-400 border-amber-500/20 hover:border-amber-500/50',
+    status: 'live',
   },
   { 
     id: 'puzzle', 
@@ -54,8 +56,12 @@ export default function Home() {
                 {/* Card Icon & Header */}
                 <div className="flex items-center justify-between mb-4">
                   <Icon className="w-8 h-8" />
-                  <span className="text-[10px] uppercase font-mono tracking-widest text-slate-500 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-md">
-                    Ready to Build
+                  <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-0.5 rounded-md border ${
+                    game.status === 'live'
+                      ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30'
+                      : 'text-slate-500 bg-slate-900 border-slate-800'
+                  }`}>
+                    {game.status === 'live' ? 'Live' : 'Coming Soon'}
                   </span>
                 </div>
                 <h2 className="text-xl font-bold text-white mb-2 group-hover:text-indigo-400 transition-colors">
