@@ -9,7 +9,7 @@ Rather than treating games as isolated scripts, Apex Arcade acts as a micro-fron
 - **Client Runtime:** React 19 + Vite (Optimized HMR & tree-shaking native build pipeline)
 - **Styling Architecture:** Tailwind CSS v4 (Compiling utility design systems natively via Vite compilation)
 - **State & Routing:** React Router v6 (Client-side decoupled state synchronization)
-- **Backend:** [Gamer-Stronghold-Backend](https://github.com/geeko452100/Gamer-Stronghold-Backend) — Supabase (PostgreSQL, Realtime WebSocket Channels, GoTrue JWT Authentication)
+- **Backend:** Supabase (PostgreSQL, Realtime WebSocket Channels, GoTrue JWT Authentication)
 
 ## 🏗️ Core Application Roadmap
 
@@ -39,11 +39,14 @@ Rather than treating games as isolated scripts, Apex Arcade acts as a micro-fron
 cd game-hub
 npm install
 
-# Copy .env.example to .env and set your Supabase project values
-# cp .env.example .env
+cp .env.example .env   # set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
+
+# Apply database schema to your Supabase project (first time only)
+npx supabase link --project-ref <your-project-ref>
+npm run db:push
 
 # Start the dev server
 npm run dev
 ```
 
-Database migrations and server-side RPC functions live in the [backend repo](https://github.com/geeko452100/Gamer-Stronghold-Backend). Apply them with `supabase db push` before running the client.
+Database migrations and server-side RPC functions live in `game-hub/supabase/migrations/`. Apply them with `supabase db push` before running the client.
