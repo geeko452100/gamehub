@@ -1,8 +1,8 @@
-# Apex Arcade
+# Gamer Stronghold
 
 A highly modular, multi-application gaming platform engineered to demonstrate advanced frontend architecture, real-time synchronization, and robust data persistence models. 
 
-Rather than treating games as isolated scripts, Apex Arcade acts as a micro-frontend shell—managing shared layout states, universal navigation context, and encapsulating distinct, complex application engines within a single unified client framework.
+Rather than treating games as isolated scripts, Gamer Stronghold acts as a micro-frontend shell—managing shared layout states, universal navigation context, and encapsulating distinct, complex application engines within a single unified client framework.
 
 ## 🛠️ System Architecture & Technology Stack
 
