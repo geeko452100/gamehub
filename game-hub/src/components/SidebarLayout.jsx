@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Gamepad2, Home, Cpu, Swords, Puzzle, Trophy, LogOut } from 'lucide-react';
-import { supabase } from '@/games/card-battler/lib/supabaseClient';
+import { Gamepad2, Home, Cpu, Swords, Puzzle, Trophy, LogOut, User } from 'lucide-react';
+import { useAuth } from '@/lib/supabase/useAuth';
 
 export default function SidebarLayout({ children }) {
   const location = useLocation();
+  const { profile, signOut } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
 
   const handleLogout = async () => {
     setSigningOut(true);
-    const { error } = await supabase.auth.signOut();
+    const { error } = await signOut();
     if (error) {
       alert(error.message);
       setSigningOut(false);
@@ -22,6 +23,7 @@ export default function SidebarLayout({ children }) {
     { path: '/game/idle', name: 'Tycoon Terminal', icon: Cpu },
     { path: '/game/puzzle', name: 'Daily Puzzle', icon: Puzzle },
     { path: '/leaderboard', name: 'Leaderboard', icon: Trophy },
+    { path: '/profile', name: 'Profile', icon: User },
   ];
 
   return (
@@ -33,12 +35,31 @@ export default function SidebarLayout({ children }) {
             <span className="text-xl font-black tracking-wider text-white">GAMER STRONGHOLD</span>
           </div>
 
+          {profile?.screen_name && (
+            <div className="flex items-center gap-3 px-2 py-3 mb-4 rounded-lg bg-slate-900 border border-slate-800">
+              {profile.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt=""
+                  className="w-8 h-8 rounded-full object-cover border border-slate-700"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center">
+                  <User className="w-4 h-4 text-slate-500" />
+                </div>
+              )}
+              <span className="text-sm font-semibold text-white truncate">
+                {profile.screen_name}
+              </span>
+            </div>
+          )}
+
           <nav className="space-y-1">
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive =
-                item.path === '/leaderboard'
-                  ? location.pathname.startsWith('/leaderboard')
+                item.path === '/leaderboard' || item.path === '/profile'
+                  ? location.pathname.startsWith(item.path)
                   : location.pathname === item.path;
 
               return (

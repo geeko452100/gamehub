@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 
 /**
  * Record a win or loss for the authenticated user after a PvP match ends.

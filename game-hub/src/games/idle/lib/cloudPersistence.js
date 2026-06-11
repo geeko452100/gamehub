@@ -1,4 +1,4 @@
-import { supabase } from '@/games/card-battler/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { getIdleLifetimeTotal } from '@/lib/leaderboard/cloudPersistence';
 import { normalizeLoadedState } from '../gameLogic';
 

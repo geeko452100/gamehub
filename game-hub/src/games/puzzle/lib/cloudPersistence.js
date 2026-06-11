@@ -1,4 +1,4 @@
-import { supabase } from '@/games/card-battler/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 
 /**
  * Upsert the player's result for a puzzle date.

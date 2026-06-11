@@ -49,4 +49,4 @@ npm run db:push
 npm run dev
 ```
 
-Database migrations and server-side RPC functions live in `game-hub/supabase/migrations/`. Apply them with `supabase db push` before running the client.
+Database migrations, storage buckets, and server-side RPC functions live in `game-hub/supabase/migrations/`. Apply them with `supabase db push` before running the client. The shared Supabase client and auth provider are in `game-hub/src/lib/supabase/`.

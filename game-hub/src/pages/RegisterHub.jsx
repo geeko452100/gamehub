@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/games/card-battler/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { Lock, Mail, User, ArrowRight, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 

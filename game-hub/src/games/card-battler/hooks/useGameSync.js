@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { supabase } from '@/games/card-battler/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { normalizeGameState, isGameInitialized } from '@/games/card-battler/gameRules';
 
 /**

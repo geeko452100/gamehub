@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 
 export const GAME_ROW_SELECT = 'status, player_1_id, player_2_id, state_version';
 

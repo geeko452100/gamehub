@@ -1,4 +1,4 @@
-import { supabase } from '@/games/card-battler/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { getTodayDate } from '@/games/puzzle/gameLogic';
 
 /**

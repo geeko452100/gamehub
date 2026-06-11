@@ -3,6 +3,7 @@ import { gameReducer } from '../gameReducer';
 import { createInitialState } from '../initialState';
 import { getTodayDate, loadSave, persistSave } from '../gameLogic';
 import { submitPuzzleResult } from '../lib/cloudPersistence';
+import { resolveDailyWord } from '@/lib/supabase/puzzlePersistence';
 
 export function usePuzzleGame(userId) {
   const today = getTodayDate();
@@ -19,15 +20,21 @@ export function usePuzzleGame(userId) {
   useEffect(() => {
     let cancelled = false;
 
-    function load() {
+    async function load() {
       setLoadStatus('loading');
       const currentDate = getTodayDate();
+      const targetWord = await resolveDailyWord(currentDate);
       const saved = loadSave(userId, currentDate);
 
       if (cancelled) return;
 
       if (saved) {
-        dispatch({ type: 'LOAD_STATE', payload: saved, puzzleDate: currentDate, userId });
+        dispatch({
+          type: 'LOAD_STATE',
+          payload: { ...saved, targetWord: saved.targetWord ?? targetWord },
+          puzzleDate: currentDate,
+          userId,
+        });
         if (saved.gameStatus === 'won') {
           scoreSubmittedRef.current = true;
           setScoreStatus('submitted');
@@ -36,7 +43,7 @@ export function usePuzzleGame(userId) {
           setScoreStatus('idle');
         }
       } else {
-        dispatch({ type: 'RESET_FOR_NEW_DAY', puzzleDate: currentDate, userId });
+        dispatch({ type: 'RESET_FOR_NEW_DAY', puzzleDate: currentDate, userId, targetWord });
         scoreSubmittedRef.current = false;
         setScoreStatus('idle');
       }
@@ -53,13 +60,23 @@ export function usePuzzleGame(userId) {
   useEffect(() => {
     if (loadStatus !== 'ready') return undefined;
 
-    function rollToNewDayIfNeeded() {
+    let cancelled = false;
+
+    async function rollToNewDayIfNeeded() {
       const currentDate = getTodayDate();
       if (stateRef.current.puzzleDate === currentDate) return;
 
+      const targetWord = await resolveDailyWord(currentDate);
+      if (cancelled) return;
+
       const saved = loadSave(userId, currentDate);
       if (saved) {
-        dispatch({ type: 'LOAD_STATE', payload: saved, puzzleDate: currentDate, userId });
+        dispatch({
+          type: 'LOAD_STATE',
+          payload: { ...saved, targetWord: saved.targetWord ?? targetWord },
+          puzzleDate: currentDate,
+          userId,
+        });
         if (saved.gameStatus === 'won') {
           scoreSubmittedRef.current = true;
           setScoreStatus('submitted');
@@ -68,7 +85,7 @@ export function usePuzzleGame(userId) {
           setScoreStatus('idle');
         }
       } else {
-        dispatch({ type: 'RESET_FOR_NEW_DAY', puzzleDate: currentDate, userId });
+        dispatch({ type: 'RESET_FOR_NEW_DAY', puzzleDate: currentDate, userId, targetWord });
         scoreSubmittedRef.current = false;
         setScoreStatus('idle');
       }
@@ -76,7 +93,10 @@ export function usePuzzleGame(userId) {
 
     rollToNewDayIfNeeded();
     const interval = setInterval(rollToNewDayIfNeeded, 60_000);
-    return () => clearInterval(interval);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [userId, loadStatus]);
 
   useEffect(() => {

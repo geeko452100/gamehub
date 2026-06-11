@@ -8,3 +8,6 @@ major_version = 15
 
 [db.migrations]
 enabled = true
+
+[functions.seed-daily-puzzle]
+verify_jwt = false

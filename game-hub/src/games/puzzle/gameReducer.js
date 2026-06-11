@@ -18,7 +18,8 @@ export function gameReducer(state, action) {
     }
 
     case 'RESET_FOR_NEW_DAY':
-      return createStateForDate(action.puzzleDate, action.userId) ?? createInitialState(action.puzzleDate);
+      return createStateForDate(action.puzzleDate, action.userId, action.targetWord)
+        ?? createInitialState(action.puzzleDate, action.targetWord);
 
     case 'TYPE_LETTER': {
       if (state.gameStatus !== 'playing') return state;

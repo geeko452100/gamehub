@@ -1,3 +1,4 @@
+import { getDailyWord } from '@/games/puzzle/gameLogic';
 import { supabase } from './client';
 
 export async function fetchDailyPuzzleWord(puzzleDate) {
@@ -11,4 +12,9 @@ export async function fetchDailyPuzzleWord(puzzleDate) {
   }
 
   return typeof data === 'string' ? data.toUpperCase() : null;
+}
+
+export async function resolveDailyWord(puzzleDate) {
+  const serverWord = await fetchDailyPuzzleWord(puzzleDate);
+  return serverWord ?? getDailyWord(puzzleDate);
 }

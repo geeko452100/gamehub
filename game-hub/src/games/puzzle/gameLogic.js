@@ -208,18 +208,23 @@ export function normalizeLoadedState(payload, puzzleDate, savedStats) {
   };
 }
 
-export function createStateForDate(puzzleDate, userId) {
+export function createStateForDate(puzzleDate, userId, targetWord) {
   const savedStats = loadStats(userId);
+  const base = normalizeLoadedState(
+    {
+      guesses: [],
+      currentGuess: '',
+      gameStatus: 'playing',
+      letterStates: {},
+    },
+    puzzleDate,
+    savedStats,
+  );
+
+  if (!base) return null;
+
   return {
-    ...normalizeLoadedState(
-      {
-        guesses: [],
-        currentGuess: '',
-        gameStatus: 'playing',
-        letterStates: {},
-      },
-      puzzleDate,
-      savedStats,
-    ),
+    ...base,
+    targetWord: targetWord ?? base.targetWord,
   };
 }

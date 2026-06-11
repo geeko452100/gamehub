@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from '@/games/card-battler/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { Lock, Mail, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -62,8 +62,15 @@ export default function AuthHub() {
             <ArrowRight className="w-4 h-4 ml-2" />
           </button>
           
-          <Link 
-            to="/register" 
+          <Link
+            to="/forgot-password"
+            className="col-span-2 text-slate-500 hover:text-white text-[10px] uppercase font-bold tracking-widest py-2 text-center transition-colors"
+          >
+            Forgot Password?
+          </Link>
+
+          <Link
+            to="/register"
             className="col-span-2 text-slate-500 hover:text-white text-[10px] uppercase font-bold tracking-widest py-2 text-center transition-colors"
           >
             Create New Account

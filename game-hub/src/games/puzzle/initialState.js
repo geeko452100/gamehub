@@ -3,10 +3,10 @@ import { getDailyWord, getTodayDate } from './gameLogic';
 export const MAX_GUESSES = 6;
 export const WORD_LENGTH = 5;
 
-export function createInitialState(puzzleDate = getTodayDate()) {
+export function createInitialState(puzzleDate = getTodayDate(), targetWord) {
   return {
     puzzleDate,
-    targetWord: getDailyWord(puzzleDate),
+    targetWord: targetWord ?? getDailyWord(puzzleDate),
     guesses: [],
     currentGuess: '',
     gameStatus: 'playing',
