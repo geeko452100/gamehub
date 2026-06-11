@@ -40,14 +40,29 @@ export default function AuthHub() {
               className="w-full bg-slate-950 border border-slate-800 text-white text-sm rounded-lg py-2.5 pl-10 pr-4 focus:outline-none focus:border-indigo-500 transition-colors"
             />
           </div>
-          <div className="relative">
-            <Lock className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
-            <input 
-              type="password" 
-              onChange={(e) => setPassword(e.target.value)} 
-              placeholder="Password" 
-              className="w-full bg-slate-950 border border-slate-800 text-white text-sm rounded-lg py-2.5 pl-10 pr-4 focus:outline-none focus:border-indigo-500 transition-colors"
-            />
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label htmlFor="password" className="text-[10px] uppercase font-bold tracking-widest text-slate-500">
+                Password
+              </label>
+              <Link
+                to="/forgot-password"
+                className="text-[10px] uppercase font-bold tracking-widest text-indigo-400 hover:text-indigo-300 transition-colors"
+              >
+                Forgot password?
+              </Link>
+            </div>
+            <div className="relative">
+              <Lock className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+                className="w-full bg-slate-950 border border-slate-800 text-white text-sm rounded-lg py-2.5 pl-10 pr-4 focus:outline-none focus:border-indigo-500 transition-colors"
+              />
+            </div>
           </div>
         </div>
 
@@ -62,13 +77,6 @@ export default function AuthHub() {
             <ArrowRight className="w-4 h-4 ml-2" />
           </button>
           
-          <Link
-            to="/forgot-password"
-            className="col-span-2 text-slate-500 hover:text-white text-[10px] uppercase font-bold tracking-widest py-2 text-center transition-colors"
-          >
-            Forgot Password?
-          </Link>
-
           <Link
             to="/register"
             className="col-span-2 text-slate-500 hover:text-white text-[10px] uppercase font-bold tracking-widest py-2 text-center transition-colors"
