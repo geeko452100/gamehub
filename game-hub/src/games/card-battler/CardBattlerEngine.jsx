@@ -1,11 +1,14 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { fetchGameRow, getRemoteVersion, updateGameStatus } from './lib/gamePersistence';
 import { recordCardBattlerResult } from './lib/statsPersistence';
 import { useGameSync } from './hooks/useGameSync';
+import { useOpponentPresence } from './hooks/useOpponentPresence';
 import { gameReducer } from './gameReducer';
 import { initialGameState } from './initialState';
 
 import GameOverModel     from './components/GameOverModel';
+import OpponentDisconnectOverlay from './components/OpponentDisconnectOverlay';
 import FieldGrid         from './components/FieldGrid';
 import BattleHandZone    from './components/BattleHandZone';
 import BattleBanners     from './components/BattleBanners';
@@ -41,6 +44,7 @@ const EMPTY_PLAYER = {
 };
 
 export default function CardBattlerEngine({ gameId, currentUserId }) {
+  const navigate = useNavigate();
   const { gameState, localDispatch } = useCardBattler();
   const [loading, setLoading]   = useState(true);
   const [timeLeft, setTimeLeft] = useState(30);
@@ -50,6 +54,21 @@ export default function CardBattlerEngine({ gameId, currentUserId }) {
   const statsRecordedRef = useRef(false);
 
   const isPlayer1 = String(currentUserId) === String(gameState?.player_1_id);
+  const opponentId = isPlayer1 ? gameState?.player_2_id : gameState?.player_1_id;
+  const gameActive = !loading && isGameInitialized(gameState);
+
+  const returnToLobby = useCallback(() => {
+    navigate('/game/cards');
+  }, [navigate]);
+
+  const { secondsRemaining: lobbyReturnSeconds } = useOpponentPresence({
+    gameId,
+    currentUserId,
+    opponentId,
+    gameActive,
+    gameOver: Boolean(gameState?.gameOver),
+    onReturnToLobby: returnToLobby,
+  });
 
   const player = isPlayer1
     ? (gameState?.player_1 ?? EMPTY_PLAYER)
@@ -398,6 +417,11 @@ export default function CardBattlerEngine({ gameId, currentUserId }) {
           onReset={resetGameSynced}
         />
       )}
+
+      <OpponentDisconnectOverlay
+        secondsRemaining={lobbyReturnSeconds}
+        onReturnNow={returnToLobby}
+      />
     </div>
   );
 }
